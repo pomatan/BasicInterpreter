@@ -1,23 +1,25 @@
 package Entities;
 
-
 public class CmdAssignment extends Cmd 
 {
 	private ExpVar var;
 	private Exp exp;
 	
-	public CmdAssignment(cmdType type, ExpVar var, Exp exp) 
+	public CmdAssignment(ExpVar var, Exp exp) 
 	{
-		super(type);
-	
 		this.var = var;
 		this.exp = exp;
 	}
 	
 	@Override
-	public int run() {
-		// TODO Auto-generated method stub
-		return 0;
+	public Utilities.result run() 
+	{
+		if(exp.computeVal() == null)
+			//in case that exp is a non initialized var
+			return Utilities.result.FAIL;
+		
+		Utilities.vars.put(var.getVar(), exp.computeVal());
+		return Utilities.result.SUCCESS;
 	}
 
 	public ExpVar getVar() {

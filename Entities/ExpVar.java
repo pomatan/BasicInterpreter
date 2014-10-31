@@ -2,22 +2,24 @@ package Entities;
 
 public class ExpVar extends Exp
 {
-	String var;
+	private Character var;
 	
-	public ExpVar(String var)
+	public ExpVar(char var)
 	{
 		this.var = var;
 	}
 	
-	public String getVar()
+	public char getVar()
 	{
 		return this.var;
 	}
 	
 	@Override
-	public int computeVal() {
-		// TODO Auto-generated method stub
-		return 0;
+	public Integer computeVal()
+	{
+		if(!Utilities.IsInitVar(var))
+			return null;
+		return Utilities.getVarContent(var);
 	}
 
 }

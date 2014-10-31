@@ -1,14 +1,11 @@
 package Entities;
 
-
 public class CmdPrint extends Cmd 
 {
 	private Exp exp;
 	
-	public CmdPrint(cmdType type, Exp exp) 
+	public CmdPrint(Exp exp) 
 	{
-		super(type);
-
 		this.exp = exp;
 	}
 
@@ -18,11 +15,14 @@ public class CmdPrint extends Cmd
 	}
 	
 	@Override
-	public int run() 
+	public Utilities.result run() 
 	{
+		if(exp.computeVal() == null)
+		//in case that exp is a non initialized var
+			return Utilities.result.FAIL;
+
 		Utilities.Print(this.exp.computeVal());
-		
-		return (Utilities.result.SUCCESS.ordinal());
+		return Utilities.result.SUCCESS;
 	}
 	
 	

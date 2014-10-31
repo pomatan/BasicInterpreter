@@ -5,10 +5,8 @@ public class CmdGoto extends Cmd
 {
 	private int num;
 	
-	public CmdGoto(cmdType type, int num)
+	public CmdGoto(int num)
 	{
-		super(type);
-		
 		this.num = num;
 	}
 
@@ -18,10 +16,10 @@ public class CmdGoto extends Cmd
 	}
 	
 	@Override
-	public int run() 
+	public Utilities.result run() 
 	{
-		// TODO Auto-generated method stub
-		return 0;
+		Utilities.nextLine = this.num;
+		return Utilities.result.SUCCESS;
 	}
 
 }

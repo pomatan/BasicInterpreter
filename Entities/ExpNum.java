@@ -16,7 +16,7 @@ public class ExpNum extends Exp
 
 	
 	@Override
-	public int computeVal() 
+	public Integer computeVal() 
 	{
 		return this.num;
 	}

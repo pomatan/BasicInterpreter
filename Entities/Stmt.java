@@ -21,9 +21,10 @@ public class Stmt
 		return(this.command);
 	}
 	
-	public int run() 
+	public Utilities.result run() 
 	{
-		// Todo, check
+		Utilities.currentLine = this.num;
+		Utilities.nextLine = null;
 		return (command.run());
 	}
 
