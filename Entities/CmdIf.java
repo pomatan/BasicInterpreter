@@ -5,12 +5,12 @@ public class CmdIf extends Cmd
 {
 	public enum BoolOp 	{ GT, ST, GEQ, SEQ, EQ, NEQ; }
 	
-	private ExpVar var1;
-	private ExpVar var2;
+	private Exp var1;
+	private Exp var2;
 	private BoolOp op;
 	private Cmd command;
 
-	public CmdIf(cmdType type, ExpVar var1, ExpVar var2, BoolOp op, Cmd command) 
+	public CmdIf(cmdType type, Exp var1, Exp var2, BoolOp op, Cmd command) 
 	{
 		super(type);
 		
@@ -25,11 +25,11 @@ public class CmdIf extends Cmd
 		return op;
 	}
 	
-	public ExpVar getVar1() {
+	public Exp getVar1() {
 		return var1;
 	}
 	
-	public ExpVar getVar2() {
+	public Exp getVar2() {
 		return var2;
 	}
 	
