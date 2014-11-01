@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 import Entities.*;
+import Entities.ExpBinOp.BinOp;
 
 public class Parser
 {
@@ -287,11 +288,80 @@ public class Parser
 	
 	private Exp parseBinaryExp(String expStr)
 	{
-		String[] tokens = expStr.split("\\s+");
+		String[] tokens = expStr.split(" ");		
 		
-		// TODO: matan
+		return (parseBinaryExp(tokens));
+	}
+	
+	private Exp parseBinaryExp(String[] expStr)
+	{
+		// if size is one try Number and Variable Expressions
+		if (expStr.length == 1)
+		{
+			return (parseExp(expStr[0]));
+		}
+		// binary exp must have opSign and two expresions (at least three tokens)
+		if (expStr.length < 2)
+		{
+			return null;
+		}
 		
-		return null;
+		// First token must be a binOp
+		BinOp op = parseBinOp(expStr[0]);
+		if (op == null)
+		{
+			return null;
+		}
+
+		// Find the end of exp1
+		int counter = 1, i=1;
+		while (counter > 0)
+		{
+			if (parseBinOp(expStr[i]) != null)
+				counter++;
+			else if(parseVariableExp(expStr[i]) != null || parseNumberExp(expStr[i]) != null)
+				counter--;
+			else
+				return null;
+			
+			// Make sure not to go out of range
+			if (i > (expStr.length - 1))
+				return (null);
+			else
+				i++;
+		}
+		
+		// parse first expresion
+		String exp1array[] = new String[i - 1];
+		System.arraycopy(expStr, 1, exp1array, 0, i-1);
+		Exp exp1 = parseBinaryExp(exp1array);
+		if (exp1 == null)
+			return null;
+		
+		// parse second expresion
+		int exp2length = expStr.length - i;
+		String exp2array[] = new String[exp2length];
+		System.arraycopy(expStr, i, exp2array, 0, exp2length);
+		Exp exp2 = parseBinaryExp(exp2array);
+		if (exp2 == null)
+			return null;
+		
+		return (new ExpBinOp(op, exp1, exp2));
+	}
+	
+	private BinOp parseBinOp(String opString)
+	{
+		BinOp op = null;
+		
+		switch (opString)
+		{
+			case "/": op = BinOp.DIV; break;
+			case "*": op = BinOp.MUL; break;
+			case "+": op = BinOp.PLUS; break;
+			case "-": op = BinOp.MIN; break;
+		}
+		
+		return op;
 	}
 
 	private class GotoMapToLine
