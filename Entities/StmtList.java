@@ -27,7 +27,7 @@ public class StmtList
 			runResult = stmts.get(i).run();
 			if(runResult == Utilities.result.FAIL) //if stmt contains a non initialized var
 			{
-				Utilities.PrintError(Utilities.currentLine, 4);
+				Utilities.PrintError(i+1, 4);
 				return;
 			}
 		

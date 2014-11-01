@@ -7,12 +7,11 @@ public abstract class Utilities
 {
 	public enum result{FAIL, SUCCESS};
 	public static Map<Character, Integer> vars; //Vars Memory
-	public static Integer currentLine;
 	public static Integer nextLine;
 	
 	public static void PrintError(int line, int code)
 	{
-		System.out.println("Error! Line:" +line + "Code:"+code);
+		System.out.println("Error! Line:" +line + " Code:"+code);
 	}
 	
 	public static void Print(int val)

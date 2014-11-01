@@ -23,7 +23,6 @@ public class Stmt
 	
 	public Utilities.result run() 
 	{
-		Utilities.currentLine = this.num;
 		Utilities.nextLine = null;
 		return (command.run());
 	}
