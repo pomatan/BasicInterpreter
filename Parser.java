@@ -3,9 +3,13 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -18,15 +22,16 @@ public class Parser
 	private BufferedReader bufReader;
 	
 	private StmtList prog = new StmtList();
-	private int lastLabelNum = -1;
+	private int maxLabelNum = -1;
 	private Set<Integer> labalesNumSet = new HashSet<Integer>();
 	private List<GotoMapToLine> gotoMapArray = new ArrayList<GotoMapToLine>(); // maps goto label line and line in file
+	private ErrorsLists errorsListHolder = new ErrorsLists(3);
 	
 	// match general command. groups: 1=num, 2=cmd
 	private static Pattern cmdGeneralRegex = Pattern.compile("^\\s*(0|[1-9][0-9]*)\\s*:\\s*(.+);\\s*$");
 	
 	// match the print command. groups: 1=exp
-	private static Pattern cmdPrintRegex = Pattern.compile("^\\s*print\\s*\\((.+)\\)\\s*$");
+	private static Pattern cmdPrintRegex = Pattern.compile("^\\s*print\\((.+)\\)\\s*$");
 	
 	// match the goto command. groups: 1=goto line number
 	private static Pattern cmdGotoRegex = Pattern.compile("^\\s*goto\\s+(0|[1-9][0-9]*)\\s*$");
@@ -35,7 +40,7 @@ public class Parser
 	private static Pattern cmdAssignmentRegex = Pattern.compile("^\\s*(.+)\\s*:=\\s*(.+)\\s*$");
 	
 	// match the if command. groups: 1=exp_1, 2=bool op, 3=exp_2, 4=inner cmd
-	private static Pattern cmdIfRegex = Pattern.compile("^\\s*if\\s*\\((.+?)(<|>|<=|>=|==|!=)(.+?)\\)\\s*(.+)\\s*$");
+	private static Pattern cmdIfRegex = Pattern.compile("^\\s*if\\((.+?)(<|>|<=|>=|==|!=)(.+?)\\)\\s*(.+)\\s*$");
 	
 	// match the variable expression. groups: 1=var
 	private static Pattern expVarRegex = Pattern.compile("^\\s*([a-z])\\s*$");
@@ -56,12 +61,7 @@ public class Parser
 		
 		while ((line = bufReader.readLine()) != null)
 		{
-		   if(!parseLine(line, lineNum))
-		   {
-			   bufReader.close();
-			   
-			   return null;
-		   }
+		   parseLine(line, lineNum);
 		   
 		   lineNum++;
 		}
@@ -69,17 +69,19 @@ public class Parser
 		bufReader.close();
 		
 		// validate that all the goto labels exists
-		for(Iterator<GotoMapToLine> iter = gotoMapArray.iterator(); iter.hasNext(); )
-		{
-			GotoMapToLine item = iter.next();
-			
+		for(GotoMapToLine item : gotoMapArray)
+		{			
 			if (!labalesNumSet.contains(item.gotoLabelNum))
 			{
-				Utilities.PrintError(item.lineNum, 2); // goto command to non-existing label
+				errorsListHolder.addError(2, item.lineNum); // goto command to non-existing label
 			}
 		}
 		
-		return this.prog;
+		// prints all errors if encountered
+		errorsListHolder.printAllErrors();
+		
+		// if no errors occurred then return the program 
+		return errorsListHolder.hasErrors() ? null : this.prog;
 	}
 
 	private boolean parseLine(String line, int lineNum)
@@ -88,7 +90,7 @@ public class Parser
 		Matcher matcher = cmdGeneralRegex.matcher(line);
 		if (!matcher.find())
 		{
-			Utilities.PrintError(lineNum, 1); // program can not be derived from grammar
+			errorsListHolder.addError(1, lineNum); // program can not be derived from grammar
 			return false;
 		}
 		
@@ -96,10 +98,18 @@ public class Parser
 		int labelNum = Integer.parseInt(matcher.group(1));
 		String cmdStr = matcher.group(2);
 		
-		// check labels are strictly monotonically	
-		if(labelNum<lastLabelNum)
+		// now parse the command
+		Cmd cmd = parseCmd(cmdStr, lineNum);
+		if (cmd==null)
 		{
-			Utilities.PrintError(lineNum, 3); // program can not be derived from grammar
+			errorsListHolder.addError(1, lineNum); // program can not be derived from grammar 
+			return false;
+		}
+		
+		// check labels are strictly monotonically	
+		if(labelNum<=maxLabelNum)
+		{
+			errorsListHolder.addError(3, lineNum); // labels are not strictly monotonically
 			return false;
 		}
 		
@@ -107,15 +117,7 @@ public class Parser
 		labalesNumSet.add(labelNum);
 		
 		// set it as the last label number
-		lastLabelNum = labelNum;
-		
-		// now parse the command
-		Cmd cmd = parseCmd(cmdStr, lineNum);
-		if (cmd==null)
-		{
-			Utilities.PrintError(lineNum, 1); // program can not be derived from grammar
-			return false;
-		}
+		maxLabelNum = Math.max(labelNum, maxLabelNum);
 		
 		// if we got so far then the command is syntaxly correct
 		// then add it to the program struct
@@ -159,7 +161,7 @@ public class Parser
 			return null;
 		
 		// parse expression 1 argument
-		Exp expArg1 = parseExp(matcher.group(1));
+		Exp expArg1 = parseVariableExp(matcher.group(1));
 		if (expArg1==null)
 			return null;
 		
@@ -176,7 +178,7 @@ public class Parser
 		}
 	
 		// parse expression 2 argument
-		Exp expArg2 = parseExp(matcher.group(3));
+		Exp expArg2 = parseVariableExp(matcher.group(3));
 		if (expArg2==null)
 			return null;
 		
@@ -325,7 +327,7 @@ public class Parser
 				return null;
 			
 			// Make sure not to go out of range
-			if (i > (expStr.length - 1))
+			if (i >= (expStr.length - 1))
 				return (null);
 			else
 				i++;
@@ -373,6 +375,63 @@ public class Parser
 		{
 			this.gotoLabelNum = gotoLabelNum;
 			this.lineNum = lineNum;
+		}
+	}
+	
+	private class ErrorsLists
+	{
+		private Map<Integer,Integer> rowsErrorsMap = new HashMap<Integer,Integer>(); // key: lineNum, value: error code
+		private boolean _hasErrors = false;
+		
+		public ErrorsLists(int numberOfLists)
+		{
+		}
+		
+		public void addError(int code, int lineNum)
+		{
+			if (!rowsErrorsMap.containsKey(lineNum) || rowsErrorsMap.get(lineNum) > code)
+			{
+				rowsErrorsMap.put(lineNum, code);
+			}
+
+			_hasErrors = true;	
+		}
+		
+		public void printAllErrors()
+		{
+			List<Entry<Integer, Integer>> list = new ArrayList<Entry<Integer, Integer>>(rowsErrorsMap.entrySet());
+			
+			// sort the error by error code and by line number
+			Collections.sort(list, new Comparator<Entry<Integer, Integer>>() 
+            {
+				@Override
+				public int compare(Entry<Integer, Integer> arg0,
+						Entry<Integer, Integer> arg1) {
+					if (arg0.getValue() == arg1.getValue())
+					{
+						// in this case the error code is the same
+						// so decide by line number
+						return arg0.getKey().compareTo(arg1.getKey());
+					}
+					else
+					{
+						// in this case the error code is not the same
+						// so decide by error code
+						return arg0.getValue().compareTo(arg1.getValue());
+					}
+				}
+            });
+			
+			// print the sorted errors
+			for (Entry<Integer, Integer> item : list)
+			{
+				Utilities.PrintError(item.getKey(), item.getValue());
+			}	
+		}
+		
+		private boolean hasErrors()
+		{
+			return _hasErrors;
 		}
 	}
 }
